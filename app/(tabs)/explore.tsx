@@ -1,112 +1,224 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+} from "react-native";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const BUTTONS = [
+  ["C", "+/-", "%", "+"],
+  ["7", "8", "9", "×"],
+  ["4", "5", "6", "−"],
+  ["1", "2", "3", "+"],
+  [".", "0", "⌫", "="],
+];
 
-export default function TabTwoScreen() {
+const OPERATOR_KEYS = ["+", "×", "−", "="];
+const GRAY_KEYS = ["C", "+/-", "%"];
+
+export default function ExploreScreen() {
+  const [expression, setExpression] = useState("");
+  const [display, setDisplay] = useState("0");
+  const [waitingForOperand, setWaitingForOperand] = useState(false);
+  const [prevValue, setPrevValue] = useState<number | null>(null);
+  const [operator, setOperator] = useState<string | null>(null);
+
+  function handlePress(key: string) {
+    if (key === "C") {
+      setExpression("");
+      setDisplay("0");
+      setPrevValue(null);
+      setOperator(null);
+      setWaitingForOperand(false);
+      return;
+    }
+
+    if (key === "⌫") {
+      if (display.length > 1) {
+        setDisplay(display.slice(0, -1));
+      } else {
+        setDisplay("0");
+      }
+      return;
+    }
+
+    if (key === "+/-") {
+      const val = parseFloat(display);
+      setDisplay(String(-val));
+      return;
+    }
+
+    if (key === "%") {
+      const val = parseFloat(display);
+      setDisplay(String(val / 100));
+      return;
+    }
+
+    if (OPERATOR_KEYS.includes(key) && key !== "=") {
+      const current = parseFloat(display);
+      setExpression(display + " " + key + " ");
+      setPrevValue(current);
+      setOperator(key);
+      setWaitingForOperand(true);
+      return;
+    }
+
+    if (key === "=") {
+      if (prevValue !== null && operator) {
+        const current = parseFloat(display);
+        let result = 0;
+        if (operator === "+") result = prevValue + current;
+        if (operator === "−") result = prevValue - current;
+        if (operator === "×") result = prevValue * current;
+        if (operator === "÷") result = prevValue / current;
+        const resultStr = Number.isInteger(result)
+          ? String(result)
+          : String(parseFloat(result.toFixed(8)));
+        setExpression(expression + display + " =");
+        setDisplay(resultStr);
+        setPrevValue(null);
+        setOperator(null);
+        setWaitingForOperand(false);
+      }
+      return;
+    }
+
+    if (key === ".") {
+      if (!display.includes(".")) {
+        setDisplay(display + ".");
+      }
+      return;
+    }
+
+    if (waitingForOperand) {
+      setDisplay(key);
+      setWaitingForOperand(false);
+    } else {
+      setDisplay(display === "0" ? key : display + key);
+    }
+  }
+
+  function getButtonStyle(key: string) {
+    if (OPERATOR_KEYS.includes(key)) return [styles.btn, styles.btnGreen];
+    if (GRAY_KEYS.includes(key)) return [styles.btn, styles.btnGray];
+    return [styles.btn, styles.btnNumber];
+  }
+
+  function getTextStyle(key: string) {
+    if (OPERATOR_KEYS.includes(key))
+      return [styles.btnText, styles.btnTextGreen];
+    return [styles.btnText, styles.btnTextDark];
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f0" />
+
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Calculator</Text>
+      </View>
+
+      <View style={styles.display}>
+        <Text style={styles.expression} numberOfLines={1}>
+          {expression || " "}
+        </Text>
+        <Text style={styles.result} numberOfLines={1} adjustsFontSizeToFit>
+          {display}
+        </Text>
+      </View>
+
+      <View style={styles.keypad}>
+        {BUTTONS.map((row, rIdx) => (
+          <View key={rIdx} style={styles.row}>
+            {row.map((key) => (
+              <TouchableOpacity
+                key={key}
+                style={getButtonStyle(key)}
+                onPress={() => handlePress(key)}
+                activeOpacity={0.75}
+              >
+                <Text style={getTextStyle(key)}>{key}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f0",
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#a8d060",
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#1f2937",
+  },
+  display: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+    paddingBottom: 16,
+  },
+  expression: {
+    fontSize: 15,
+    color: "#9ca3af",
+    marginBottom: 4,
+  },
+  result: {
+    fontSize: 52,
+    fontWeight: "300",
+    color: "#1f2937",
+  },
+  keypad: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    gap: 10,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  btn: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnNumber: {
+    backgroundColor: "#e4e4e4",
+  },
+  btnGray: {
+    backgroundColor: "#d0d0d0",
+  },
+  btnGreen: {
+    backgroundColor: "#a8d060",
+  },
+  btnText: {
+    fontSize: 22,
+    fontWeight: "500",
+  },
+  btnTextDark: {
+    color: "#1f2937",
+  },
+  btnTextGreen: {
+    color: "#ffffff",
   },
 });
